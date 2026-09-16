@@ -1,0 +1,37 @@
+{
+  "name": "ziyunhu-server",
+  "version": "1.0.0",
+  "description": "紫云湖文房商城后端 API 服务",
+  "main": "server.js",
+  "packageManager": "pnpm@11.19.0",
+  "engines": {
+    "node": ">=22.22.0 <25",
+    "pnpm": ">=11 <12"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "test": "node --test",
+    "init-db": "node config/initDB.js",
+    "build:admin": "tailwindcss -i public/admin-source.css -o public/admin.css --content public/admin.html,public/admin-payment.js,public/admin-personal.js,public/admin-marketing.js,public/admin-membership.js,public/admin-store-profile.js,public/admin-after-sales.js,public/admin-editorial.js,public/admin-staff.js --minify",
+    "sync:frontend": "node scripts/sync-frontend.cjs",
+    "backup:db": "node scripts/backup-database.cjs",
+    "audit:sensitive": "node scripts/audit-sensitive-data.cjs",
+    "replace:jd-products": "node scripts/replace-products-from-jd.cjs"
+  },
+  "dependencies": {
+    "alipay-sdk": "^4.14.0",
+    "bcryptjs": "^2.4.3",
+    "better-sqlite3": "^11.3.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.0",
+    "jsonwebtoken": "^9.0.2",
+    "multer": "^2.3.0",
+    "qrcode": "^1.5.4"
+  },
+  "devDependencies": {
+    "sucrase": "3.35.1",
+    "tailwindcss": "3.4.19"
+  }
+}

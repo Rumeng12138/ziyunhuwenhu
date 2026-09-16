@@ -1,0 +1,5 @@
+allowBuilds:
+  better-sqlite3: true
+overrides:
+  qs: 6.16.0
+  urllib: 4.9.1
