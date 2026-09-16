@@ -1,0 +1,36 @@
+services:
+  - type: web
+    name: ziyunhu-shop
+    runtime: node
+    region: singapore
+    plan: 0.5c-512mb
+    rootDir: server
+    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm run sync:frontend && pnpm run build:admin
+    startCommand: pnpm start
+    healthCheckPath: /api/health
+    autoDeploy: false
+    envVars:
+      - key: NODE_VERSION
+        value: 24.14.1
+      - key: NODE_ENV
+        value: production
+      - key: HOST
+        value: 0.0.0.0
+      - key: TRUST_PROXY
+        value: "true"
+      - key: STORAGE_DIR
+        value: /var/data
+      - key: JWT_SECRET
+        generateValue: true
+      - key: ADMIN_INITIAL_PASSWORD
+        sync: false
+      - key: PUBLIC_SITE_URL
+        sync: false
+      - key: CORS_ORIGIN
+        sync: false
+      - key: REQUIRE_ICP
+        value: "0"
+    disk:
+      name: ziyunhu-data
+      mountPath: /var/data
+      sizeGB: 1
