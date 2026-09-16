@@ -1,0 +1,10 @@
+require('dotenv').config();
+const fs=require('node:fs');
+const path=require('node:path');
+const db=require('../config/db');
+const {backupDir}=require('../config/storage');
+const stamp=new Date().toISOString().replace(/[:.]/g,'-');
+const dir=path.resolve(process.argv[2]||backupDir);
+fs.mkdirSync(dir,{recursive:true});
+const target=path.join(dir,`scheduled-${stamp}.db`);
+db.backup(target).then(()=>{console.log(`Database backup completed: ${target}`);db.close();}).catch(error=>{console.error('Database backup failed:',error.message);try{db.close();}catch{}process.exitCode=1;});

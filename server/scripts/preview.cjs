@@ -1,0 +1,22 @@
+// Isolated UI verification: no .env, production database, or real payment providers.
+process.env.DB_PATH=':memory:';
+process.env.JWT_SECRET=require('node:crypto').randomBytes(32).toString('hex');
+require('../config/initDB');
+const db=require('../config/db'),express=require('express'),path=require('node:path');
+db.prepare('UPDATE editorial_sections SET published=1').run();
+const password=require('bcryptjs').hashSync('preview123',10);
+db.prepare("INSERT INTO users(username,password,nickname,member_level) VALUES('preview',?,'页面测试',1)").run(password);
+const app=express();app.use(require('../middleware/security').securityHeaders);app.use(express.json());app.use(express.urlencoded({extended:true}));
+for(const [prefix,file] of [['auth','auth'],['products','products'],['orders','orders'],['after-sales','after-sales'],['cart','cart'],['addresses','address'],['favorites','favorites'],['feedback','feedback'],['payment','payment-live'],['admin/payment-settings','payment-settings'],['admin/merchant-connect','merchant-connect'],['admin/personal-payments','personal-payments'],['admin/store-profile','store-profile'],['admin/editorial-content','editorial-content'],['admin/after-sales','admin-after-sales'],['admin/store-settings','store-settings'],['admin/marketing','marketing'],['admin','admin']])app.use('/api/'+prefix,require('../routes/'+file));
+for(const provider of Object.values(require('../services/payments').providers))provider.isReady=false;
+app.get('/api/store-settings',(req,res)=>res.json({code:200,data:require('../services/membership').features()}));
+app.get('/api/store-offers',(req,res)=>res.json({code:200,data:require('../services/pricing').publicOffers()}));
+app.get('/api/store-profile',(req,res)=>res.json({code:200,data:require('../services/store-profile').publicProfile()}));
+app.get('/api/editorial-content',(req,res)=>res.json({code:200,data:require('../services/editorial-content').publicContent()}));
+app.get('/api/readiness',(req,res)=>res.json({code:200,data:require('../services/readiness').report()}));
+app.use(express.static(path.join(__dirname,'../public')));
+app.get('/products',(req,res)=>res.sendFile(path.join(__dirname,'../public/index.html')));
+app.get('/admin',(req,res)=>res.sendFile(path.join(__dirname,'../public/admin.html')));
+app.use('/api',(req,res)=>res.status(404).json({code:404,message:'接口不存在'}));
+app.use((e,req,res,next)=>res.status(e.status||500).json({code:e.status||500,message:e.message}));
+const server=app.listen(0,'127.0.0.1',()=>console.log('Isolated preview: http://127.0.0.1:'+server.address().port));

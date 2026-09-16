@@ -1,0 +1,9 @@
+const express=require('express');
+const {adminRequired}=require('../middleware/admin');
+const confirmAdmin=require('../services/admin-confirmation');
+const editorial=require('../services/editorial-content');
+const router=express.Router();
+router.use(adminRequired,(req,res,next)=>{res.set('Cache-Control','no-store');next();});
+router.get('/',(req,res)=>res.json({code:200,data:editorial.get()}));
+router.put('/',(req,res)=>{confirmAdmin(req);res.json({code:200,message:'首页装修内容与排版已保存',data:editorial.save.immediate(req.body)});});
+module.exports=router;

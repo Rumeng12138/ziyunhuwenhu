@@ -1,0 +1,17 @@
+const afterSaleLabels={pending:'待审核',approved:'已同意',returning:'退货中',refund_pending:'待退款',completed:'已完成',rejected:'已拒绝',cancelled:'已撤销'};
+let afterSaleStatusFilter='';
+async function loadAfterSales(){
+  const page=document.getElementById('page-after-sales');
+  page.innerHTML=`<div class="flex justify-between items-center mb-5"><h2 class="text-xl font-bold">售后管理</h2><select id="afterSaleStatus" class="border rounded p-2" onchange="afterSaleStatusFilter=this.value;loadAfterSales()"><option value="">全部状态</option>${Object.entries(afterSaleLabels).map(([id,label])=>`<option value="${id}" ${afterSaleStatusFilter===id?'selected':''}>${label}</option>`).join('')}</select></div><p class="text-sm text-gray-500 mb-4">退款必须先在原支付平台实际执行，再登记真实退款流水；本站不会因修改状态自动向买家打款。</p><div id="afterSaleList" class="space-y-3"></div>`;
+  const result=await request('/after-sales?status='+encodeURIComponent(afterSaleStatusFilter));
+  if(result.code!==200)return;const list=result.data.list||[];document.getElementById('afterSaleList').innerHTML=list.length?list.map(item=>{item=escapeRecord(item);return `<div class="bg-white rounded-lg border p-4"><div class="flex justify-between gap-4"><div><strong>${item.request_no}</strong> · 订单 ${item.order_no}<div class="text-sm text-gray-500">${item.username||item.nickname||'用户'} · ${item.type} · 申请 ¥${Number(item.requested_amount).toFixed(2)}</div></div><span class="badge bg-purple-50">${afterSaleLabels[item.status]||item.status}</span></div><p class="text-sm mt-3"><strong>原因：</strong>${item.reason}<br>${item.description||''}</p><div class="mt-3 flex flex-wrap gap-2">${afterSaleActions(item)}</div></div>`}).join(''):'<div class="text-gray-500">暂无售后申请</div>';
+}
+function afterSaleActions(item){
+  if(item.status==='pending')return `<button class="border rounded px-3 py-1" onclick="changeAfterSale(${item.id},'approved')">同意</button><button class="border rounded px-3 py-1 text-red-600" onclick="changeAfterSale(${item.id},'rejected')">拒绝</button>`;
+  if(['approved','returning'].includes(item.status)&&item.type==='exchange')return `<button class="border rounded px-3 py-1" onclick="changeAfterSale(${item.id},'completed')">确认换货完成</button>`;
+  if(['approved','returning'].includes(item.status))return `<button class="border rounded px-3 py-1" onclick="changeAfterSale(${item.id},'refund_pending')">进入待退款</button><button class="bg-purple-700 text-white rounded px-3 py-1" onclick="recordRefund(${item.id},${Number(item.requested_amount)})">登记已退款</button>`;
+  if(item.status==='refund_pending')return `<button class="bg-purple-700 text-white rounded px-3 py-1" onclick="recordRefund(${item.id},${Number(item.requested_amount)})">登记已退款</button>`;
+  return '';
+}
+async function changeAfterSale(id,status){const note=prompt('请输入处理说明（会展示给买家）');if(!note)return;const result=await request('/after-sales/'+id+'/status',{method:'PUT',body:JSON.stringify({status,admin_note:note})});if(result.code===200)loadAfterSales();else alert(result.message);}
+async function recordRefund(id,amount){const value=prompt('请输入实际退款金额',amount.toFixed(2));if(!value)return;const reference=prompt('请输入支付平台退款流水号');if(!reference)return;const password=prompt('请输入管理员密码确认');if(!password)return;const note=prompt('退款说明（可选）')||'';const result=await request('/after-sales/'+id+'/refund-record',{method:'POST',body:JSON.stringify({amount:Number(value),external_reference:reference,admin_password:password,note})});if(result.code===200)loadAfterSales();else alert(result.message);}

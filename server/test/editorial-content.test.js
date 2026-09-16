@@ -1,0 +1,44 @@
+const {test}=require('node:test');
+const assert=require('node:assert/strict');
+const crypto=require('node:crypto');
+process.env.DB_PATH=':memory:';
+process.env.JWT_SECRET=crypto.randomBytes(48).toString('hex');
+require('../config/initDB');
+const db=require('../config/db');
+const express=require('express');
+const jwt=require('jsonwebtoken');
+
+test('every homepage module and nested card can be edited, added, deleted, ordered, laid out and published',async t=>{
+  const app=express();app.use(express.json());app.use('/api/admin/editorial-content',require('../routes/editorial-content'));
+  app.use((error,req,res,next)=>res.status(error.status||500).json({code:error.status||500,message:error.message}));
+  const server=app.listen(0,'127.0.0.1');await new Promise(resolve=>server.once('listening',resolve));
+  t.after(async()=>{await new Promise(resolve=>server.close(resolve));db.close();});
+  const base='http://127.0.0.1:'+server.address().port;
+  const admin=db.prepare("SELECT * FROM users WHERE username='admin'").get();
+  const token=jwt.sign({id:admin.id,session_version:admin.session_version},process.env.JWT_SECRET);
+  async function request(method='GET',body){const response=await fetch(base+'/api/admin/editorial-content',{method,headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},body:body?JSON.stringify(body):undefined});return {status:response.status,body:await response.json()};}
+  const initial=await request();assert.equal(initial.status,200);assert.equal(initial.body.data.sections.length,5);
+  assert.deepEqual(initial.body.data.sections.map(section=>[section.section_key,section.items.length]),[['hero',0],['treasures',4],['artisans',4],['culture',3],['brand_story',3]]);
+  assert.match(initial.body.data.sections[0].body_en,/Inspired by the landscapes/);
+  assert.deepEqual(require('../services/editorial-content').readinessStatus(),{ok:true,missing:[]});
+  assert.equal(require('../services/editorial-content').publicContent().sections.length,5);
+  assert.ok(db.prepare("SELECT 1 FROM schema_migrations WHERE id='homepage_content_independent_v1'").get());
+  const sections=initial.body.data.sections.map((section,index)=>({...section,eyebrow_zh:'新眉题'+index,eyebrow_en:'New eyebrow '+index,title_zh:'新标题'+index,title_en:'New title '+index,intro_zh:'新简介'+index,intro_en:'New intro '+index,body_zh:'第一段\n\n第二段',body_en:'Paragraph one\n\nParagraph two',layout:['split','left','centered','split','left'][index],items_layout:['two','four','three','two','list'][index],sort_order:5-index,published:index!==1,items:section.items.map((item,itemIndex)=>({...item,title_zh:item.title_zh+'改',title_en:item.title_en+' edited',sort_order:itemIndex+1,published:!(section.section_key==='culture'&&itemIndex===0)}))}));
+  const artisans=sections.find(section=>section.section_key==='artisans');artisans.items.pop();artisans.items.push({id:null,symbol_zh:'新',symbol_en:'New',label_zh:'新匠人',label_en:'New artisan',title_zh:'新增匠人',title_en:'Added artisan',meta_zh:'从业 1 年',meta_en:'1 year',summary_zh:'新增中文摘要',summary_en:'Added English summary',body_zh:'中文正文',body_en:'English body',sort_order:4,published:true});
+  assert.equal((await request('PUT',{sections,admin_password:'wrong'})).status,403);
+  const saved=await request('PUT',{sections,admin_password:'admin123'});assert.equal(saved.status,200,JSON.stringify(saved.body));
+  assert.deepEqual(saved.body.data.sections.map(section=>section.sort_order),[1,2,3,4,5]);
+  assert.equal(saved.body.data.sections[0].section_key,sections.find(section=>section.sort_order===1).section_key);
+  assert.equal(saved.body.data.sections[0].layout,'left');
+  assert.equal(saved.body.data.sections[0].items_layout,'list');
+  assert.equal(saved.body.data.sections[0].body_zh,'第一段\n\n第二段');
+  assert.equal(saved.body.data.sections.find(section=>section.section_key==='artisans').items.length,4);
+  assert.ok(saved.body.data.sections.find(section=>section.section_key==='artisans').items.some(item=>item.title_zh==='新增匠人'));
+  delete require.cache[require.resolve('../config/initDB')];require('../config/initDB');
+  assert.equal(require('../services/editorial-content').get().sections.find(section=>section.section_key==='artisans').items.length,4,'deleted seed cards must not return after restart');
+  const publicSections=require('../services/editorial-content').publicContent().sections;
+  assert.equal(publicSections.length,4);assert.ok(publicSections.every(section=>section.published));
+  assert.ok(publicSections.find(section=>section.section_key==='culture').items.every(item=>item.published));
+  assert.deepEqual(require('../services/editorial-content').readinessStatus(),{ok:false,missing:['treasures']});
+  assert.equal((await request('PUT',{sections,admin_password:'admin123'})).status,409);
+});

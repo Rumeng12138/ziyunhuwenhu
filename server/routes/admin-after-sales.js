@@ -1,0 +1,21 @@
+const express = require('express');
+const db = require('../config/db');
+const { adminRequired } = require('../middleware/admin');
+const confirmAdmin = require('../services/admin-confirmation');
+const pagination = require('../services/pagination');
+const service = require('../services/after-sales');
+const validate = require('../services/validation');
+const router = express.Router();
+router.use(adminRequired,(req,res,next)=>{res.set('Cache-Control','no-store');next();});
+router.get('/',(req,res)=>{
+  const {page,pageSize,offset}=pagination(req.query,20);
+  const status=req.query.status ? validate.oneOf(req.query.status,['pending','approved','returning','refund_pending','completed','rejected','cancelled'],'售后状态') : '';
+  const where="(?='' OR a.status=?)"; const params=[status,status];
+  const total=db.prepare(`SELECT COUNT(*) count FROM after_sales a WHERE ${where}`).get(...params).count;
+  const list=db.prepare(`SELECT a.*,o.order_no,u.username,u.nickname FROM after_sales a JOIN orders o ON o.id=a.order_id LEFT JOIN users u ON u.id=a.user_id WHERE ${where} ORDER BY a.id DESC LIMIT ? OFFSET ?`).all(...params,pageSize,offset);
+  res.json({code:200,data:{list,total,page,pageSize}});
+});
+router.get('/:id',(req,res)=>res.json({code:200,data:service.detail(req.params.id)}));
+router.put('/:id/status',(req,res)=>res.json({code:200,message:'售后状态已更新',data:service.update.immediate(req.params.id,req.admin.id,req.body)}));
+router.post('/:id/refund-record',(req,res)=>{confirmAdmin(req);res.json({code:200,message:'退款凭证已登记并计入退款统计',data:service.recordRefund.immediate(req.params.id,req.admin.id,req.body)});});
+module.exports=router;

@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" role="img" aria-labelledby="title desc">
+  <title id="title">文房水墨背景</title>
+  <desc id="desc">紫灰色山水与宣纸纹理组成的抽象背景</desc>
+  <defs>
+    <linearGradient id="paper" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#f8f5ed"/><stop offset="1" stop-color="#ded5c5"/></linearGradient>
+    <radialGradient id="ink"><stop stop-color="#6b4e91" stop-opacity=".55"/><stop offset="1" stop-color="#2f2738" stop-opacity="0"/></radialGradient>
+    <filter id="soft"><feGaussianBlur stdDeviation="18"/></filter>
+    <pattern id="grain" width="24" height="24" patternUnits="userSpaceOnUse"><circle cx="3" cy="5" r=".7" fill="#392f42" opacity=".12"/><circle cx="17" cy="19" r=".5" fill="#927aa8" opacity=".15"/></pattern>
+  </defs>
+  <rect width="1200" height="800" fill="url(#paper)"/>
+  <rect width="1200" height="800" fill="url(#grain)"/>
+  <ellipse cx="910" cy="210" rx="360" ry="290" fill="url(#ink)" filter="url(#soft)"/>
+  <path d="M0 620 Q180 430 350 590 T690 535 T1040 590 T1200 500 V800 H0Z" fill="#40384a" opacity=".3"/>
+  <path d="M0 680 Q220 560 430 650 T820 620 T1200 600 V800 H0Z" fill="#6b4e91" opacity=".24"/>
+  <circle cx="210" cy="185" r="66" fill="#b24b3f" opacity=".72"/>
+  <path d="M760 125 C705 290 690 410 715 590" fill="none" stroke="#2c2930" stroke-width="18" stroke-linecap="round" opacity=".48"/>
+  <path d="M720 260 Q635 220 585 285 M708 350 Q795 315 855 370" fill="none" stroke="#2c2930" stroke-width="8" stroke-linecap="round" opacity=".4"/>
+</svg>

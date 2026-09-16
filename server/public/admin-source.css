@@ -1,0 +1,15 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  button:disabled { opacity: .5; cursor: not-allowed; }
+  input, select, textarea { min-width: 0; }
+}
+@media(max-width: 640px) {
+  #mainPage { flex-direction: column; }
+  #mainPage aside { width: 100%; }
+  #mainPage aside nav { display: flex; flex-wrap: wrap; padding: .5rem; }
+  #mainPage aside nav a { padding: .75rem; }
+  .page { padding: 1rem; }
+}
